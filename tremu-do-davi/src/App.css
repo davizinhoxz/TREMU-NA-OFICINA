@@ -1,38 +1,280 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f4f4f5;
+  color: #18181b;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
 .App {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ---------- Header ---------- */
+.App-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.App-header h1 {
+  font-size: 48px;
+  letter-spacing: 4px;
+  margin: 0;
+  font-weight: 900;
+  font-style: italic;
+  color: #18181b;
+}
+
+.title-accent {
+  color: #71717a;
+}
+
+.subtitle {
+  letter-spacing: 6px;
+  color: #71717a;
+  font-size: 12px;
+  margin: 4px 0 16px;
+}
+
+.status-message {
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: inline-block;
+  font-size: 14px;
+  color: #3f3f46;
+}
+
+/* ---------- Layout ---------- */
+.main-content {
+  display: flex;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.left-panel,
+.right-panel {
+  flex: 1;
+  min-width: 320px;
+}
+
+.panel-title {
+  text-align: center;
+  letter-spacing: 4px;
+  font-style: italic;
+  color: #71717a;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* ---------- Camera ---------- */
+.camera-panel {
+  display: flex;
+  justify-content: center;
+}
+
+.camera-frame {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 4 / 3;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.camera-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a1a1aa;
+  font-size: 14px;
+}
+
+.letter-indicator {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.letter-detected {
+  font-size: 28px;
+  font-weight: 900;
+  color: #18181b;
+  min-width: 36px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #e4e4e7;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.progress-fill {
+  height: 100%;
+  background: #52525b;
+  transition: width 0.05s linear;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.camera-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.camera-controls button {
+  background: #18181b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.camera-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- Game grid ---------- */
+.game-grid {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.grid-row {
+  display: flex;
+  gap: 8px;
+}
+
+.grid-cell {
+  width: 56px;
+  height: 56px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  font-size: 28px;
+  font-weight: 900;
+  border-radius: 6px;
+  text-transform: uppercase;
+  border: 2px solid #d4d4d8;
+  background: #ffffff;
+  color: #18181b;
 }
 
-.App-link {
-  color: #61dafb;
+.cell-empty {
+  border-color: #e4e4e7;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.cell-filled {
+  border-color: #71717a;
+  color: #18181b;
+}
+
+.cell-correct {
+  background: #18181b;
+  border-color: #18181b;
+  color: #fff;
+}
+
+.cell-present {
+  background: #d4d4d8;
+  border-color: #a1a1aa;
+  color: #18181b;
+}
+
+.cell-absent {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #a1a1aa;
+}
+
+/* ---------- Instructions ---------- */
+.instructions-panel {
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.instructions-title {
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: #71717a;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.instructions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.instructions-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.instructions-letter {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #18181b;
+  color: #ffffff;
+  font-weight: 900;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.instructions-text {
+  font-size: 14px;
+  color: #3f3f46;
+}
+
+.instructions-tip {
+  font-size: 13px;
+  color: #71717a;
+  margin: 0;
+  border-top: 1px solid #e4e4e7;
+  padding-top: 12px;
 }
