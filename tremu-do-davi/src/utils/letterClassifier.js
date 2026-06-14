@@ -1,5 +1,6 @@
 // ============================================================
-// Funções auxiliares de geometria
+// Classificador simples por geometria dos 21 pontos da mão
+// Foco desta versão: mais estabilidade e melhor separação A / S / M.
 // ============================================================
 
 function vec(a, b) {
@@ -19,27 +20,17 @@ function angleBetween(v1, v2) {
     return (Math.acos(cos) * 180) / Math.PI;
 }
 
-// Tamanho de referência da mão (para normalizar distâncias e
-// tornar a deteção independente da distância à câmara)
 function handSize(lm) {
     return dist(lm[0], lm[9]) || 1;
 }
 
-// Ângulo de "dobra" de um dedo:
-//  ~0º   -> dedo completamente esticado
-//  ~150º -> dedo completamente fechado
 function fingerCurl(lm, mcp, pip, tip) {
     return angleBetween(vec(lm[mcp], lm[pip]), vec(lm[pip], lm[tip]));
 }
 
-// Abaixo disto = dedo considerado ESTICADO
 const EXT_THRESHOLD = 40;
-// Acima disto = dedo considerado FECHADO
 const CURL_THRESHOLD = 55;
 
-// Posição do polegar ao longo da "linha" formada pelas bases dos
-// outros 4 dedos (MCPs). 0 = lado do indicador, 1 = lado do mindinho.
-// Como é uma fração relativa, funciona para mão esquerda e direita.
 function thumbSpread(lm) {
     const xs = [lm[5].x, lm[9].x, lm[13].x, lm[17].x];
     const min = Math.min(...xs);
@@ -48,9 +39,9 @@ function thumbSpread(lm) {
     return (lm[4].x - min) / (max - min);
 }
 
-// ============================================================
-// Estado dos dedos / polegar
-// ============================================================
+function between(value, a, b) {
+    return value >= a && value <= b;
+}
 
 export function getFingerStates(lm) {
     const size = handSize(lm);
@@ -72,61 +63,54 @@ export function getFingerStates(lm) {
 
     const thumbTip = lm[4];
     const thumbToIndexMcp = dist(thumbTip, lm[5]) / size;
+    const thumbToMiddleMcp = dist(thumbTip, lm[9]) / size;
+    const thumbToRingMcp = dist(thumbTip, lm[13]) / size;
     const thumbToWrist = dist(thumbTip, lm[0]) / size;
     const thumbToIndexTip = dist(thumbTip, lm[8]) / size;
     const thumbToMiddleTip = dist(thumbTip, lm[12]) / size;
     const indexMiddleTipDist = dist(lm[8], lm[12]) / size;
+    const thumbToPalmCenter = dist(thumbTip, lm[9]) / size;
 
-    // polegar bem afastado da palma (ex: L, Y)
-    const thumbOut = thumbToIndexMcp > 0.8 && thumbToWrist > 1.05;
-
+    const thumbOut = thumbToIndexMcp > 0.75 && thumbToWrist > 0.95;
     const spread = thumbSpread(lm);
+
+    // Valores usados para diferenciar punho fechado:
+    // A = polegar do lado de fora / ao lado do indicador.
+    // S = polegar cruzado por cima da palma.
+    // M = polegar mais escondido/central.
+    const thumbAcrossPalm = thumbToPalmCenter < 0.55 || thumbToMiddleMcp < thumbToIndexMcp;
+    const thumbSide = !thumbAcrossPalm && thumbToIndexMcp < 0.95 && thumbToWrist > 0.65;
+    const fist = indexCurled && middleCurled && ringCurled && pinkyCurled;
 
     return {
         size,
         index, middle, ring, pinky,
         indexCurled, middleCurled, ringCurled, pinkyCurled,
         indexCurl, middleCurl, ringCurl, pinkyCurl,
-        thumbTip, thumbToIndexMcp, thumbToWrist,
-        thumbToIndexTip, thumbToMiddleTip, indexMiddleTipDist,
-        thumbOut, spread,
+        thumbTip, thumbToIndexMcp, thumbToMiddleMcp, thumbToRingMcp, thumbToWrist,
+        thumbToIndexTip, thumbToMiddleTip, indexMiddleTipDist, thumbToPalmCenter,
+        thumbOut, spread, thumbAcrossPalm, thumbSide, fist,
     };
 }
 
-// ============================================================
-// Regras das letras
-//
-// Cobrimos: A, B, C, D, E, F, I, K, L, M, O, R, S, T, U, V, W, X, Y
-// (M também serve de aproximação para N, ver nota mais abaixo)
-//
-// Não suportadas (dependem muito da rotação da mão / movimento):
-//   G, H, J, N (em separado), P, Q, Z
-// Sugestão: na lista de palavras (gameLogic.js), evita estas letras
-// ou junta N ao grupo do M.
-// ============================================================
-
 const LETTER_RULES = [
     {
-        // F: indicador dobrado a tocar o polegar, restantes esticados
         letter: 'F',
         match: (f) =>
             f.middle && f.ring && f.pinky && f.indexCurled &&
             f.thumbToIndexTip < 0.35,
     },
     {
-        // B: 4 dedos esticados e juntos, polegar dobrado sobre a palma
         letter: 'B',
         match: (f) => f.index && f.middle && f.ring && f.pinky && !f.thumbOut,
     },
     {
-        // R: indicador e médio esticados e cruzados
         letter: 'R',
         match: (f, lm) =>
             f.index && f.middle && f.ringCurled && f.pinkyCurled &&
             (lm[8].x - lm[12].x) * (lm[6].x - lm[10].x) < 0,
     },
     {
-        // K: indicador e médio esticados, polegar visível entre eles
         letter: 'K',
         match: (f, lm) =>
             f.index && f.middle && f.ringCurled && f.pinkyCurled &&
@@ -134,61 +118,52 @@ const LETTER_RULES = [
             f.thumbToIndexMcp > 0.35,
     },
     {
-        // W: indicador, médio e anelar esticados, mindinho fechado
         letter: 'W',
         match: (f) => f.index && f.middle && f.ring && f.pinkyCurled,
     },
     {
-        // U: indicador e médio esticados e próximos
         letter: 'U',
         match: (f) =>
             f.index && f.middle && f.ringCurled && f.pinkyCurled &&
             f.indexMiddleTipDist < 0.3,
     },
     {
-        // V: indicador e médio esticados e afastados
         letter: 'V',
         match: (f) =>
             f.index && f.middle && f.ringCurled && f.pinkyCurled &&
             f.indexMiddleTipDist >= 0.3,
     },
     {
-        // L: indicador e polegar esticados em "L", restantes fechados
         letter: 'L',
         match: (f) =>
             f.index && f.thumbOut &&
             f.middleCurled && f.ringCurled && f.pinkyCurled,
     },
     {
-        // Y: polegar e mindinho esticados, restantes fechados
         letter: 'Y',
         match: (f) =>
             f.pinky && f.thumbOut &&
             f.indexCurled && f.middleCurled && f.ringCurled,
     },
     {
-        // D: indicador esticado, polegar a tocar a ponta do médio (fechado)
         letter: 'D',
         match: (f) =>
             f.index && f.middleCurled && f.ringCurled && f.pinkyCurled &&
             f.thumbToMiddleTip < 0.35,
     },
     {
-        // I: apenas o mindinho esticado
         letter: 'I',
         match: (f) =>
             f.pinky && !f.thumbOut &&
             f.indexCurled && f.middleCurled && f.ringCurled,
     },
     {
-        // X: indicador em "gancho" (parcialmente dobrado), resto fechado
         letter: 'X',
         match: (f) =>
-            f.indexCurl > EXT_THRESHOLD && f.indexCurl < CURL_THRESHOLD &&
+            between(f.indexCurl, EXT_THRESHOLD, CURL_THRESHOLD) &&
             f.middleCurled && f.ringCurled && f.pinkyCurled,
     },
     {
-        // O: dedos curvados a tocar o polegar, formando um círculo
         letter: 'O',
         match: (f) =>
             f.thumbToIndexTip < 0.3 &&
@@ -196,7 +171,6 @@ const LETTER_RULES = [
             f.middleCurl > EXT_THRESHOLD,
     },
     {
-        // C: mão em forma de "C", todos os dedos parcialmente dobrados
         letter: 'C',
         match: (f) =>
             [f.indexCurl, f.middleCurl, f.ringCurl, f.pinkyCurl].every(
@@ -204,42 +178,45 @@ const LETTER_RULES = [
             ),
     },
 
-    // ---------- Grupo do punho fechado: T, A, E, S, M(+N) ----------
+    // Punho fechado: regras mais restritivas para evitar A virar S/M.
     {
-        // T: punho fechado, polegar visível entre indicador e médio
         letter: 'T',
         match: (f) =>
-            f.indexCurled && f.middleCurled && f.ringCurled && f.pinkyCurled &&
-            f.spread > 0.1 && f.spread < 0.45 &&
-            f.thumbToIndexMcp > 0.25 && f.thumbToIndexMcp < 0.7,
+            f.fist &&
+            f.spread > 0.15 && f.spread < 0.45 &&
+            f.thumbToIndexMcp > 0.25 && f.thumbToIndexMcp < 0.7 &&
+            f.thumbAcrossPalm,
     },
     {
-        // A: punho fechado, polegar encostado ao lado (lado do indicador)
+        // A: punho fechado com polegar ao lado, não cruzado por cima da palma.
+        // Esta regra agora vem antes de S/M e não depende apenas do spread,
+        // porque o spread oscilava muito com mão esquerda/direita e rotação.
         letter: 'A',
         match: (f) =>
-            f.indexCurled && f.middleCurled && f.ringCurled && f.pinkyCurled &&
-            f.spread <= 0.15 && !f.thumbOut,
+            f.fist &&
+            f.thumbSide &&
+            !f.thumbAcrossPalm &&
+            f.thumbToIndexTip > 0.28 &&
+            f.thumbToMiddleTip > 0.28,
     },
     {
-        // E: punho fechado, pontas dos dedos a tocar o polegar
         letter: 'E',
         match: (f) =>
-            f.indexCurled && f.middleCurled && f.ringCurled && f.pinkyCurled &&
-            f.thumbToIndexTip < 0.3 && f.thumbToMiddleTip < 0.3,
+            f.fist &&
+            f.thumbToIndexTip < 0.28 && f.thumbToMiddleTip < 0.28,
     },
     {
-        // S: punho fechado, polegar cruzado à frente dos dedos
+        // S: punho fechado com polegar cruzado claramente à frente/centro.
         letter: 'S',
         match: (f) =>
-            f.indexCurled && f.middleCurled && f.ringCurled && f.pinkyCurled &&
-            f.spread > 0.45,
+            f.fist &&
+            f.thumbAcrossPalm &&
+            f.thumbToPalmCenter < 0.58,
     },
     {
-        // M (e aproximação de N): punho fechado, polegar escondido
-        // por baixo do indicador/médio/anelar
+        // M: deixado como fallback do punho fechado, para não roubar o A.
         letter: 'M',
-        match: (f) =>
-            f.indexCurled && f.middleCurled && f.ringCurled && f.pinkyCurled,
+        match: (f) => f.fist && !f.thumbSide,
     },
 ];
 

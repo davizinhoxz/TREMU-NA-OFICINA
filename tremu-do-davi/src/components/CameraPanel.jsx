@@ -11,7 +11,8 @@ const HAND_CONNECTIONS = [
   [0, 17],
 ];
 
-const STABLE_FRAMES_REQUIRED = 15;
+const STABLE_FRAMES_REQUIRED = 18;
+const UNLOCK_FRAMES_REQUIRED = 10;
 
 export default function CameraPanel({ onLetterConfirmed, disabled }) {
   const { videoRef, landmarks, ready } = useHandLandmarks();
@@ -23,7 +24,12 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
 
-  // ---- desenhar a câmara + esqueleto da mão ----
+  const lastCandidateRef = useRef(null);
+  const stableCountRef = useRef(0);
+  const lockedRef = useRef(false);
+  const unlockCountRef = useRef(0);
+  const lastConfirmedRef = useRef(null);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -68,13 +74,17 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
     return () => cancelAnimationFrame(animationId);
   }, [landmarks, videoRef]);
 
-  // ---- classificação da letra + lógica anti-duplicados ----
   useEffect(() => {
     if (disabled) {
       setCurrentLetter(null);
       setStableCount(0);
       setLocked(false);
       setDebugInfo(null);
+      lastCandidateRef.current = null;
+      stableCountRef.current = 0;
+      lockedRef.current = false;
+      unlockCountRef.current = 0;
+      lastConfirmedRef.current = null;
       return;
     }
 
@@ -87,32 +97,58 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
       setDebugInfo(null);
     }
 
-    // Se está bloqueado (já confirmámos uma letra), só desbloqueia
-    // quando a mão deixar de mostrar um gesto reconhecido
-    // (ou seja, o utilizador relaxa/muda a mão antes da próxima letra)
-    if (locked) {
+    // Anti-duplicação real: depois de confirmar uma letra, só volta a aceitar
+    // outra quando a mão desaparecer/ficar sem gesto reconhecido por alguns frames.
+    if (lockedRef.current) {
       if (letter === null) {
+        unlockCountRef.current += 1;
+      } else {
+        unlockCountRef.current = 0;
+      }
+
+      if (unlockCountRef.current >= UNLOCK_FRAMES_REQUIRED) {
+        lockedRef.current = false;
+        lastConfirmedRef.current = null;
         setLocked(false);
       }
+
+      stableCountRef.current = 0;
+      lastCandidateRef.current = letter;
       setStableCount(0);
       return;
     }
 
     if (letter === null) {
+      stableCountRef.current = 0;
+      lastCandidateRef.current = null;
       setStableCount(0);
       return;
     }
 
-    setStableCount((prev) => {
-      const next = prev + 1;
-      if (next >= STABLE_FRAMES_REQUIRED) {
+    // A contagem só sobe se for a MESMA letra em frames seguidos.
+    // Antes o contador subia mesmo quando o classificador alternava A/M/S.
+    if (letter !== lastCandidateRef.current) {
+      lastCandidateRef.current = letter;
+      stableCountRef.current = 1;
+    } else {
+      stableCountRef.current += 1;
+    }
+
+    setStableCount(stableCountRef.current);
+
+    if (stableCountRef.current >= STABLE_FRAMES_REQUIRED) {
+      if (letter !== lastConfirmedRef.current) {
         onLetterConfirmed?.(letter);
-        setLocked(true);
-        return 0;
+        lastConfirmedRef.current = letter;
       }
-      return next;
-    });
-  }, [landmarks, disabled, onLetterConfirmed, locked, showDebug]);
+
+      lockedRef.current = true;
+      unlockCountRef.current = 0;
+      stableCountRef.current = 0;
+      setStableCount(0);
+      setLocked(true);
+    }
+  }, [landmarks, disabled, onLetterConfirmed, showDebug]);
 
   const progress = locked ? 1 : Math.min(stableCount / STABLE_FRAMES_REQUIRED, 1);
 
@@ -138,9 +174,9 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
         )}
 
         {locked && (
-          <div className="letter-indicator" style={{ marginTop: 4 }}>
+          <div className="letter-indicator locked-indicator">
             <span style={{ fontSize: '0.85rem' }}>
-              ✅ Letra confirmada — muda o gesto para continuar
+              ✅ Letra confirmada — retire a mão da câmera para continuar
             </span>
           </div>
         )}
@@ -174,7 +210,8 @@ spread:     ${debugInfo.spread.toFixed(2)}
 thumbToIndexMcp:  ${debugInfo.thumbToIndexMcp.toFixed(2)}
 thumbToIndexTip:  ${debugInfo.thumbToIndexTip.toFixed(2)}
 thumbToMiddleTip: ${debugInfo.thumbToMiddleTip.toFixed(2)}
-thumbOut:   ${debugInfo.thumbOut}
+thumbAcrossPalm: ${debugInfo.thumbAcrossPalm}
+thumbSide:   ${debugInfo.thumbSide}
 letra:      ${currentLetter ?? '-'}`}
         </pre>
       )}
