@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHandLandmarks } from '../hooks/useHandLandmarks';
-import { classifyLetter } from '../utils/letterClassifier';
+import { classifyLetter, getFingerStates } from '../utils/letterClassifier';
 
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -19,7 +19,11 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
 
   const [currentLetter, setCurrentLetter] = useState(null);
   const [stableCount, setStableCount] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
 
+  // ---- desenhar a câmara + esqueleto da mão ----
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -64,15 +68,35 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
     return () => cancelAnimationFrame(animationId);
   }, [landmarks, videoRef]);
 
+  // ---- classificação da letra + lógica anti-duplicados ----
   useEffect(() => {
     if (disabled) {
       setCurrentLetter(null);
       setStableCount(0);
+      setLocked(false);
+      setDebugInfo(null);
       return;
     }
 
     const letter = classifyLetter(landmarks);
     setCurrentLetter(letter);
+
+    if (showDebug && landmarks) {
+      setDebugInfo(getFingerStates(landmarks));
+    } else if (showDebug) {
+      setDebugInfo(null);
+    }
+
+    // Se está bloqueado (já confirmámos uma letra), só desbloqueia
+    // quando a mão deixar de mostrar um gesto reconhecido
+    // (ou seja, o utilizador relaxa/muda a mão antes da próxima letra)
+    if (locked) {
+      if (letter === null) {
+        setLocked(false);
+      }
+      setStableCount(0);
+      return;
+    }
 
     if (letter === null) {
       setStableCount(0);
@@ -83,13 +107,14 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
       const next = prev + 1;
       if (next >= STABLE_FRAMES_REQUIRED) {
         onLetterConfirmed?.(letter);
+        setLocked(true);
         return 0;
       }
       return next;
     });
-  }, [landmarks, disabled, onLetterConfirmed]);
+  }, [landmarks, disabled, onLetterConfirmed, locked, showDebug]);
 
-  const progress = Math.min(stableCount / STABLE_FRAMES_REQUIRED, 1);
+  const progress = locked ? 1 : Math.min(stableCount / STABLE_FRAMES_REQUIRED, 1);
 
   return (
     <div className="camera-panel">
@@ -111,7 +136,48 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
             </div>
           </div>
         )}
+
+        {locked && (
+          <div className="letter-indicator" style={{ marginTop: 4 }}>
+            <span style={{ fontSize: '0.85rem' }}>
+              ✅ Letra confirmada — muda o gesto para continuar
+            </span>
+          </div>
+        )}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowDebug((v) => !v)}
+        style={{ marginTop: 8, fontSize: '0.8rem' }}
+      >
+        {showDebug ? 'Ocultar' : 'Mostrar'} dados técnicos
+      </button>
+
+      {showDebug && debugInfo && (
+        <pre
+          style={{
+            marginTop: 6,
+            fontSize: '0.7rem',
+            background: '#18181b',
+            color: '#a1a1aa',
+            padding: 8,
+            borderRadius: 6,
+            overflowX: 'auto',
+          }}
+        >
+{`indexCurl:  ${debugInfo.indexCurl.toFixed(1)}
+middleCurl: ${debugInfo.middleCurl.toFixed(1)}
+ringCurl:   ${debugInfo.ringCurl.toFixed(1)}
+pinkyCurl:  ${debugInfo.pinkyCurl.toFixed(1)}
+spread:     ${debugInfo.spread.toFixed(2)}
+thumbToIndexMcp:  ${debugInfo.thumbToIndexMcp.toFixed(2)}
+thumbToIndexTip:  ${debugInfo.thumbToIndexTip.toFixed(2)}
+thumbToMiddleTip: ${debugInfo.thumbToMiddleTip.toFixed(2)}
+thumbOut:   ${debugInfo.thumbOut}
+letra:      ${currentLetter ?? '-'}`}
+        </pre>
+      )}
     </div>
   );
 }
