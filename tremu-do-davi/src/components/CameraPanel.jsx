@@ -100,18 +100,20 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
     // Anti-duplicação real: depois de confirmar uma letra, só volta a aceitar
     // outra quando a mão desaparecer/ficar sem gesto reconhecido por alguns frames.
     if (lockedRef.current) {
-      if (letter === null) {
-        unlockCountRef.current += 1;
-      } else {
-        unlockCountRef.current = 0;
-      }
-
-      if (unlockCountRef.current >= UNLOCK_FRAMES_REQUIRED) {
+      if (!landmarks || letter === null) {
         lockedRef.current = false;
         lastConfirmedRef.current = null;
+        unlockCountRef.current = 0;
+        stableCountRef.current = 0;
+        lastCandidateRef.current = null;
+
         setLocked(false);
+        setStableCount(0);
+        setCurrentLetter(null);
+        return;
       }
 
+      unlockCountRef.current = 0;
       stableCountRef.current = 0;
       lastCandidateRef.current = letter;
       setStableCount(0);
@@ -202,7 +204,7 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
             overflowX: 'auto',
           }}
         >
-{`indexCurl:  ${debugInfo.indexCurl.toFixed(1)}
+          {`indexCurl:  ${debugInfo.indexCurl.toFixed(1)}
 middleCurl: ${debugInfo.middleCurl.toFixed(1)}
 ringCurl:   ${debugInfo.ringCurl.toFixed(1)}
 pinkyCurl:  ${debugInfo.pinkyCurl.toFixed(1)}

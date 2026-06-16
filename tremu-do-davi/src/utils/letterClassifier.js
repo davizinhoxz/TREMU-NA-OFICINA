@@ -173,51 +173,60 @@ const LETTER_RULES = [
     {
         letter: 'C',
         match: (f) =>
-            [f.indexCurl, f.middleCurl, f.ringCurl, f.pinkyCurl].every(
-                (c) => c > EXT_THRESHOLD && c < CURL_THRESHOLD + 20
-            ),
+            !f.fist &&
+            f.thumbToIndexTip > 0.28 &&
+            f.thumbToIndexTip < 0.75 &&
+            f.indexCurl > 25 && f.indexCurl < 115 &&
+            f.middleCurl > 25 && f.middleCurl < 115 &&
+            f.ringCurl > 25 && f.ringCurl < 125 &&
+            f.pinkyCurl > 25 && f.pinkyCurl < 130,
     },
 
     // Punho fechado: regras mais restritivas para evitar A virar S/M.
     {
-        letter: 'T',
-        match: (f) =>
-            f.fist &&
-            f.spread > 0.15 && f.spread < 0.45 &&
-            f.thumbToIndexMcp > 0.25 && f.thumbToIndexMcp < 0.7 &&
-            f.thumbAcrossPalm,
-    },
-    {
-        // A: punho fechado com polegar ao lado, não cruzado por cima da palma.
-        // Esta regra agora vem antes de S/M e não depende apenas do spread,
-        // porque o spread oscilava muito com mão esquerda/direita e rotação.
-        letter: 'A',
-        match: (f) =>
-            f.fist &&
-            f.thumbSide &&
-            !f.thumbAcrossPalm &&
-            f.thumbToIndexTip > 0.28 &&
-            f.thumbToMiddleTip > 0.28,
-    },
-    {
-        letter: 'E',
-        match: (f) =>
-            f.fist &&
-            f.thumbToIndexTip < 0.28 && f.thumbToMiddleTip < 0.28,
-    },
-    {
-        // S: punho fechado com polegar cruzado claramente à frente/centro.
-        letter: 'S',
-        match: (f) =>
-            f.fist &&
-            f.thumbAcrossPalm &&
-            f.thumbToPalmCenter < 0.58,
-    },
-    {
-        // M: deixado como fallback do punho fechado, para não roubar o A.
-        letter: 'M',
-        match: (f) => f.fist && !f.thumbSide,
-    },
+    letter: 'N',
+    match: (f) =>
+        f.fist &&
+        f.thumbAcrossPalm &&
+        f.thumbToPalmCenter >= 0.55 &&
+        f.thumbToPalmCenter < 0.95,
+},
+{
+    letter: 'M',
+    match: (f) =>
+        f.fist &&
+        f.thumbAcrossPalm &&
+        f.thumbToPalmCenter < 0.55,
+},
+{
+    letter: 'T',
+    match: (f) =>
+        f.fist &&
+        f.thumbAcrossPalm &&
+        f.thumbToIndexMcp < 0.7 &&
+        f.thumbToPalmCenter >= 0.95,
+},
+{
+    letter: 'A',
+    match: (f) =>
+        f.fist &&
+        f.thumbSide &&
+        !f.thumbAcrossPalm,
+},
+{
+    letter: 'E',
+    match: (f) =>
+        f.fist &&
+        f.thumbToIndexTip < 0.35 &&
+        f.thumbToMiddleTip < 0.35,
+},
+{
+    letter: 'S',
+    match: (f) =>
+        f.fist &&
+        f.thumbAcrossPalm,
+},
+
 ];
 
 export function classifyLetter(landmarks) {
