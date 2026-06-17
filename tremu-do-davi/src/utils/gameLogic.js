@@ -9,7 +9,7 @@ export const WORD_LIST = [
   'CAIR','CALA','CALO','CAMA','CANO','CAPA','CARA','CARO','CASO',
   'CEGO','CEIA','CENA','CERA','CIMA','COCO','COPO','CORA','CORO','COTA','CRUZ','CURA',
 
-  'DADO','DAMA','DANO','DEDO','DEUS','DICA','DINO','DOCE','DOMA',
+  'DADO','DAMA','DANO','DEDO','DEUS','DICA','DINO','DOCE','DOMA', 'DAVI',
 
   'EIRA','ELMO','ERRO','ESTA','ESTE',
 
