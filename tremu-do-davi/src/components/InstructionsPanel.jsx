@@ -33,6 +33,11 @@ export default function InstructionsPanel() {
         {LETTER_GUIDES.map(({ letter, description }) => (
           <li key={letter} className="instructions-item">
             <span className="instructions-letter">{letter}</span>
+            <img
+              src={`/signs/${letter}.png`}
+              alt={`Sinal ASL para ${letter}`}
+              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+            />
             <span className="instructions-text">{description}</span>
           </li>
         ))}
