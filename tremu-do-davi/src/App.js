@@ -38,7 +38,7 @@ function App() {
         <h1>
           <span className="title-accent">SINAL</span>WORDLE
         </h1>
-        <p className="subtitle">JOGO DE PALAVRAS EM LÍNGUA GESTUAL PORTUGUESA</p>
+        <p className="subtitle">JOGO DE PALAVRAS EM LÍNGUA GESTUAL</p>
         <p className="status-message">
           {state.status === 'playing' &&
             'Faça o sinal de cada letra para a câmera. As letras entram automaticamente.'}

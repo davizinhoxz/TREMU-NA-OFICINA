@@ -17,7 +17,11 @@ export default function GameGrid({ attempts, currentGuess }) {
             key={j}
             className={`grid-cell ${FEEDBACK_CLASS[attempt.feedback[j]]}`}
           >
-            {letter}
+            <img
+              src={`/signs/${letter}.png`}
+              alt={letter}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
         ))}
       </div>

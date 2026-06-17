@@ -84,7 +84,7 @@ body {
   position: relative;
   width: 100%;
   max-width: 480px;
-  aspect-ratio: 4 / 3;
+  /* sem aspect-ratio — o canvas define a proporção real */
   background: #ffffff;
   border: 1px solid #d4d4d8;
   border-radius: 8px;
@@ -93,7 +93,7 @@ body {
 
 .camera-canvas {
   width: 100%;
-  height: 100%;
+  height: auto;   /* mantém proporção real do vídeo */
   display: block;
 }
 
@@ -205,21 +205,21 @@ body {
 }
 
 .cell-correct {
-  background: #18181b;
-  border-color: #18181b;
+  background: #16a34a;   /* verde */
+  border-color: #16a34a;
   color: #fff;
 }
 
 .cell-present {
-  background: #d4d4d8;
-  border-color: #a1a1aa;
-  color: #18181b;
+  background: #ca8a04;   /* amarelo */
+  border-color: #ca8a04;
+  color: #fff;
 }
 
 .cell-absent {
-  background: #f4f4f5;
-  border-color: #e4e4e7;
-  color: #a1a1aa;
+  background: #18181b;   /* preto */
+  border-color: #18181b;
+  color: #fff;
 }
 
 /* ---------- Instructions ---------- */

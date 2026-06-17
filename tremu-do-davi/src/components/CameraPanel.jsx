@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHandLandmarks } from '../hooks/useHandLandmarks';
-import { classifyLetter, getFingerStates } from '../utils/letterClassifier';
+import { classifyLetter } from '../utils/letterClassifier';
 
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -11,7 +11,7 @@ const HAND_CONNECTIONS = [
   [0, 17],
 ];
 
-const STABLE_FRAMES_REQUIRED = 18;
+const STABLE_FRAMES_REQUIRED = 33;
 
 export default function CameraPanel({ onLetterConfirmed, disabled }) {
   const { videoRef, landmarks, ready } = useHandLandmarks();
@@ -20,8 +20,6 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
   const [currentLetter, setCurrentLetter] = useState(null);
   const [stableCount, setStableCount] = useState(0);
   const [locked, setLocked] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [debugInfo, setDebugInfo] = useState(null);
 
   const lastCandidateRef = useRef(null);
   const stableCountRef = useRef(0);
@@ -78,7 +76,6 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
       setCurrentLetter(null);
       setStableCount(0);
       setLocked(false);
-      setDebugInfo(null);
       lastCandidateRef.current = null;
       stableCountRef.current = 0;
       lockedRef.current = false;
@@ -90,14 +87,6 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
     const letter = classifyLetter(landmarks);
     setCurrentLetter(letter);
 
-    if (showDebug && landmarks) {
-      setDebugInfo(getFingerStates(landmarks));
-    } else if (showDebug) {
-      setDebugInfo(null);
-    }
-
-    // Anti-duplicação real: depois de confirmar uma letra, só volta a aceitar
-    // outra quando a mão desaparecer/ficar sem gesto reconhecido por alguns frames.
     if (lockedRef.current) {
       if (!landmarks || letter === null) {
         lockedRef.current = false;
@@ -126,8 +115,6 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
       return;
     }
 
-    // A contagem só sobe se for a MESMA letra em frames seguidos.
-    // Antes o contador subia mesmo quando o classificador alternava A/M/S.
     if (letter !== lastCandidateRef.current) {
       lastCandidateRef.current = letter;
       stableCountRef.current = 1;
@@ -149,7 +136,7 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
       setStableCount(0);
       setLocked(true);
     }
-  }, [landmarks, disabled, onLetterConfirmed, showDebug]);
+  }, [landmarks, disabled, onLetterConfirmed]);
 
   const progress = locked ? 1 : Math.min(stableCount / STABLE_FRAMES_REQUIRED, 1);
 
@@ -182,40 +169,6 @@ export default function CameraPanel({ onLetterConfirmed, disabled }) {
           </div>
         )}
       </div>
-
-      <button
-        type="button"
-        onClick={() => setShowDebug((v) => !v)}
-        style={{ marginTop: 8, fontSize: '0.8rem' }}
-      >
-        {showDebug ? 'Ocultar' : 'Mostrar'} dados técnicos
-      </button>
-
-      {showDebug && debugInfo && (
-        <pre
-          style={{
-            marginTop: 6,
-            fontSize: '0.7rem',
-            background: '#18181b',
-            color: '#a1a1aa',
-            padding: 8,
-            borderRadius: 6,
-            overflowX: 'auto',
-          }}
-        >
-          {`indexCurl:  ${debugInfo.indexCurl.toFixed(1)}
-middleCurl: ${debugInfo.middleCurl.toFixed(1)}
-ringCurl:   ${debugInfo.ringCurl.toFixed(1)}
-pinkyCurl:  ${debugInfo.pinkyCurl.toFixed(1)}
-spread:     ${debugInfo.spread.toFixed(2)}
-thumbToIndexMcp:  ${debugInfo.thumbToIndexMcp.toFixed(2)}
-thumbToIndexTip:  ${debugInfo.thumbToIndexTip.toFixed(2)}
-thumbToMiddleTip: ${debugInfo.thumbToMiddleTip.toFixed(2)}
-thumbAcrossPalm: ${debugInfo.thumbAcrossPalm}
-thumbSide:   ${debugInfo.thumbSide}
-letra:      ${currentLetter ?? '-'}`}
-        </pre>
-      )}
     </div>
   );
 }
