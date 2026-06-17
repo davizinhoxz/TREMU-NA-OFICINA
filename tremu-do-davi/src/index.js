@@ -9,3 +9,5 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+//Pega no elemento <div id="root"> do index.html e monta a aplicação React dentro dele.
