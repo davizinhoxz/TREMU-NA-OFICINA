@@ -12,7 +12,6 @@ const HAND_CONNECTIONS = [
 ];
 
 const STABLE_FRAMES_REQUIRED = 18;
-const UNLOCK_FRAMES_REQUIRED = 10;
 
 export default function CameraPanel({ onLetterConfirmed, disabled }) {
   const { videoRef, landmarks, ready } = useHandLandmarks();
